@@ -79,6 +79,12 @@ export default function Opportunities() {
             >
               Nouvelle opportunité
             </Link>
+            <Link
+              href="/opportunities/export"
+              className="bg-green-600 px-4 py-2 rounded-md text-white text-sm font-medium hover:bg-green-700"
+            >
+              Exporter
+            </Link>
           </div>
         </div>
 
