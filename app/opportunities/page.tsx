@@ -56,7 +56,7 @@ export default function Opportunities() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Opportunities</h1>
           <button
-            onClick={() => {/* TODO: Implement new opportunity creation */}}
+            onClick={() => router.push('/opportunities/new')}
             className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             New Opportunity
