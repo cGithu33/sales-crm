@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       throw new Error('Aucun texte n\'a été détecté dans l\'image')
     }
 
-    const detectedText = result.fullTextAnnotation.text
+    const detectedText = result.fullTextAnnotation.text || ''
     console.log('Texte détecté:', detectedText)
 
     // Extraire les informations
