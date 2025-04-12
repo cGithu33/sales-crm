@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
 import { ImageAnnotatorClient } from '@google-cloud/vision'
 
-// Initialiser le client Vision AI
-const vision = new ImageAnnotatorClient()
+const credentials = {
+  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+  credentials: {
+    private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL
+  }
+}
+
+// Initialiser le client Vision AI avec les credentials
+const vision = new ImageAnnotatorClient(credentials)
 
 export async function POST(request: Request) {
   try {
@@ -13,16 +21,19 @@ export async function POST(request: Request) {
 
     // Analyser l'image avec Vision AI
     const [result] = await vision.textDetection(buffer)
-    const text = result.fullTextAnnotation?.text || ''
+    const detectedText = result.fullTextAnnotation?.text || ''
+
+    console.log('Texte détecté:', detectedText)
 
     // Extraire les informations pertinentes
     const data = {
-      company: extractCompany(text),
-      name: extractName(text),
-      email: extractEmail(text),
-      phone: extractPhone(text)
+      company: extractCompany(detectedText),
+      name: extractName(detectedText),
+      email: extractEmail(detectedText),
+      phone: extractPhone(detectedText)
     }
 
+    console.log('Données extraites:', data)
     return NextResponse.json(data)
   } catch (error) {
     console.error('Erreur analyse carte:', error)
@@ -33,15 +44,27 @@ export async function POST(request: Request) {
   }
 }
 
-// Fonctions d'extraction (à améliorer selon vos besoins)
 function extractCompany(text: string): string {
-  // Logique d'extraction du nom de l'entreprise
-  return ''
+  // Recherche la ligne qui ressemble le plus à un nom d'entreprise
+  const lines = text.split('\n')
+  const companyLine = lines.find(line => 
+    line.toUpperCase() === line && // Tout en majuscules
+    line.length > 3 && // Plus de 3 caractères
+    !line.includes('@') && // Pas un email
+    !line.match(/^\+?\d/) // Ne commence pas par un numéro
+  )
+  return companyLine || ''
 }
 
 function extractName(text: string): string {
-  // Logique d'extraction du nom
-  return ''
+  // Recherche un nom propre (première lettre majuscule)
+  const lines = text.split('\n')
+  const nameLine = lines.find(line => 
+    line.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+/) && // Format "Prénom Nom"
+    !line.includes('@') && // Pas un email
+    !line.match(/^\+?\d/) // Ne commence pas par un numéro
+  )
+  return nameLine || ''
 }
 
 function extractEmail(text: string): string {
