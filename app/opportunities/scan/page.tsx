@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 export default function ScanBusinessCard() {
   const { data: session, status } = useSession()
@@ -12,6 +12,16 @@ export default function ScanBusinessCard() {
   const [error, setError] = useState('')
   const [scanning, setScanning] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [stream, setStream] = useState<MediaStream | null>(null)
+
+  // Nettoyage du stream quand on quitte la page
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [stream])
 
   // Redirection si non authentifié
   if (status === 'unauthenticated') {
@@ -22,16 +32,45 @@ export default function ScanBusinessCard() {
   // Démarrer la caméra
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }
-      })
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        setScanning(true)
+      // Vérifier si la caméra est disponible
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('La caméra n\'est pas disponible sur votre appareil')
+      }
+
+      // Essayer d'abord la caméra arrière
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: 'environment' } }
+        })
+        setStream(newStream)
+        if (videoRef.current) {
+          videoRef.current.srcObject = newStream
+          setScanning(true)
+        }
+      } catch (backCameraError) {
+        // Si la caméra arrière échoue, essayer la caméra frontale
+        console.log('Caméra arrière non disponible, tentative avec la caméra frontale...')
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }
+        })
+        setStream(newStream)
+        if (videoRef.current) {
+          videoRef.current.srcObject = newStream
+          setScanning(true)
+        }
       }
     } catch (error) {
       console.error('Erreur accès caméra:', error)
-      setError('Impossible d\'accéder à la caméra')
+      setError('Impossible d\'accéder à la caméra. Vérifiez vos paramètres de confidentialité.')
+    }
+  }
+
+  // Arrêter la caméra
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+      setScanning(false)
     }
   }
 
@@ -52,6 +91,9 @@ export default function ScanBusinessCard() {
 
       // Convertir en base64
       const imageData = canvas.toDataURL('image/jpeg')
+
+      // Arrêter la caméra après la capture
+      stopCamera()
 
       // Envoyer au serveur pour OCR
       const response = await fetch('/api/scan-card', {
@@ -78,6 +120,7 @@ export default function ScanBusinessCard() {
     } catch (error) {
       console.error('Erreur capture:', error)
       setError('Erreur lors de la capture. Veuillez réessayer.')
+      setScanning(false)
     } finally {
       setProcessing(false)
     }
@@ -124,20 +167,32 @@ export default function ScanBusinessCard() {
               )}
             </div>
 
-            {scanning && (
-              <div className="mt-4 flex justify-center">
-                <button
-                  onClick={captureImage}
-                  disabled={processing}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50"
-                >
-                  {processing ? 'Analyse en cours...' : 'Prendre la photo'}
-                </button>
-              </div>
-            )}
+            <div className="mt-4 flex justify-center space-x-4">
+              {scanning && (
+                <>
+                  <button
+                    onClick={stopCamera}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md disabled:opacity-50"
+                    disabled={processing}
+                  >
+                    Arrêter la caméra
+                  </button>
+                  <button
+                    onClick={captureImage}
+                    disabled={processing}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50"
+                  >
+                    {processing ? 'Analyse en cours...' : 'Prendre la photo'}
+                  </button>
+                </>
+              )}
+            </div>
 
             <p className="mt-4 text-sm text-gray-500 text-center">
-              Placez la carte de visite dans le cadre et prenez la photo
+              {scanning 
+                ? 'Placez la carte de visite dans le cadre et prenez la photo'
+                : 'Cliquez sur le bouton pour activer la caméra'
+              }
             </p>
           </div>
         </div>
