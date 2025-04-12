@@ -195,9 +195,9 @@ export default function NewOpportunity() {
                   type="number"
                   name="value"
                   id="value"
-                  required
                   min="0"
                   step="0.01"
+                  placeholder="0"
                   value={formData.value}
                   onChange={(e) => setFormData(prev => ({ ...prev, value: e.target.value }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
