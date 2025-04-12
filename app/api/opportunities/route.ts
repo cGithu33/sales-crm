@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getServerSession } from 'next-auth'
-import { options } from '../auth/[...nextauth]/options'
+import { authOptions } from '@/auth.config'
 
 const prisma = new PrismaClient()
 
 export async function GET() {
   try {
-    const session = await getServerSession(options)
+    const session = await getServerSession(authOptions)
 
     if (!session) {
       return NextResponse.json(
