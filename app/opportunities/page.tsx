@@ -68,12 +68,20 @@ export default function Opportunités() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Opportunités</h1>
-          <button
-            onClick={() => router.push('/opportunities/new')}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            Nouvelle Opportunité
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => router.push('/opportunities/scan')}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              Scanner carte
+            </button>
+            <button
+              onClick={() => router.push('/opportunities/new')}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              Nouvelle Opportunité
+            </button>
+          </div>
         </div>
 
         {opportunités.length === 0 ? (
