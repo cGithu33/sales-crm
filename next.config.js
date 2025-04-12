@@ -36,6 +36,10 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=self'
+          },
+          {
+            key: 'Feature-Policy',
+            value: 'camera *'
           }
         ]
       }

@@ -33,26 +33,46 @@ export default function ScanBusinessCard() {
   const startCamera = async () => {
     try {
       // Vérifier si la caméra est disponible
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (!navigator.mediaDevices) {
         throw new Error('La caméra n\'est pas disponible sur votre appareil')
       }
 
+      console.log('Tentative d\'accès à la caméra...')
+
       // Essayer d'abord la caméra arrière
       try {
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: 'environment' } }
-        })
+        console.log('Tentative caméra arrière...')
+        const constraints = {
+          video: {
+            facingMode: { exact: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        }
+        console.log('Contraintes:', constraints)
+        
+        const newStream = await navigator.mediaDevices.getUserMedia(constraints)
+        console.log('Flux caméra arrière obtenu')
+        
         setStream(newStream)
         if (videoRef.current) {
           videoRef.current.srcObject = newStream
           setScanning(true)
         }
       } catch (backCameraError) {
+        console.log('Erreur caméra arrière:', backCameraError)
+        console.log('Tentative caméra frontale...')
+        
         // Si la caméra arrière échoue, essayer la caméra frontale
-        console.log('Caméra arrière non disponible, tentative avec la caméra frontale...')
         const newStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' }
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
         })
+        console.log('Flux caméra frontale obtenu')
+        
         setStream(newStream)
         if (videoRef.current) {
           videoRef.current.srcObject = newStream
@@ -157,6 +177,7 @@ export default function ScanBusinessCard() {
                     ref={videoRef}
                     autoPlay
                     playsInline
+                    muted
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                   <canvas
