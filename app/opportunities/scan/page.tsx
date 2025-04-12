@@ -25,12 +25,20 @@ export default function ScanBusinessCard() {
       setProcessing(true)
       setError('')
 
+      console.log('Fichier sélectionné:', file.name, 'taille:', file.size, 'type:', file.type)
+
       // Convertir l'image en base64
       const base64 = await new Promise<string>((resolve) => {
         const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
+        reader.onloadend = () => {
+          const result = reader.result as string
+          console.log('Image convertie en base64, taille:', result.length)
+          resolve(result)
+        }
         reader.readAsDataURL(file)
       })
+
+      console.log('Envoi de la requête à /api/scan-card...')
 
       // Envoyer au serveur pour OCR
       const response = await fetch('/api/scan-card', {
@@ -41,12 +49,14 @@ export default function ScanBusinessCard() {
         body: JSON.stringify({ image: base64 }),
       })
 
+      console.log('Réponse reçue, status:', response.status)
+      const data = await response.json()
+      console.log('Données reçues:', data)
+
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'analyse de l\'image')
+        throw new Error(data.error || 'Erreur lors de l\'analyse de l\'image')
       }
 
-      const data = await response.json()
-      
       // Créer l'opportunité avec les données extraites
       router.push('/opportunities/new?' + new URLSearchParams({
         company: data.company || '',
@@ -55,8 +65,8 @@ export default function ScanBusinessCard() {
         phone: data.phone || ''
       }))
     } catch (error) {
-      console.error('Erreur analyse:', error)
-      setError('Erreur lors de l\'analyse. Veuillez réessayer.')
+      console.error('Erreur complète:', error)
+      setError(error instanceof Error ? error.message : 'Erreur lors de l\'analyse. Veuillez réessayer')
     } finally {
       setProcessing(false)
     }
@@ -72,7 +82,7 @@ export default function ScanBusinessCard() {
             </h2>
             
             {error && (
-              <div className="mt-2 text-sm text-red-600">
+              <div className="mt-2 text-sm text-red-600 whitespace-pre-wrap">
                 {error}
               </div>
             )}
