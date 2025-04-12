@@ -1,23 +1,34 @@
 import { NextResponse } from 'next/server'
 import { ImageAnnotatorClient } from '@google-cloud/vision'
 
-// Fonction pour nettoyer la clé privée
-function cleanPrivateKey(key: string | undefined): string {
-  if (!key) throw new Error('La clé privée Google Cloud est manquante')
-  return key
-    .replace(/\\n/g, '\n')
-    .replace(/\s+/g, '\n')
-    .replace(/^"|"$/g, '')
-}
+// Fonction pour créer le client Vision AI
+async function createVisionClient() {
+  try {
+    // Vérifier les credentials
+    if (!process.env.GOOGLE_CLOUD_PROJECT_ID || 
+        !process.env.GOOGLE_CLOUD_CLIENT_EMAIL || 
+        !process.env.GOOGLE_CLOUD_PRIVATE_KEY) {
+      throw new Error('Configuration Google Cloud incomplète')
+    }
 
-// Initialiser le client Vision AI avec les credentials
-const vision = new ImageAnnotatorClient({
-  credentials: {
-    client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-    private_key: cleanPrivateKey(process.env.GOOGLE_CLOUD_PRIVATE_KEY)
-  },
-  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
-})
+    // Nettoyer la clé privée
+    const privateKey = process.env.GOOGLE_CLOUD_PRIVATE_KEY
+      .replace(/\\n/g, '\n')
+      .replace(/^"|"$/g, '')
+
+    // Créer le client avec les credentials
+    return new ImageAnnotatorClient({
+      credentials: {
+        client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+        private_key: privateKey,
+      },
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    })
+  } catch (error) {
+    console.error('Erreur création client Vision:', error)
+    throw new Error('Impossible d\'initialiser Google Cloud Vision')
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -46,18 +57,15 @@ export async function POST(request: Request) {
     const imageBuffer = Buffer.from(base64Data, 'base64')
     console.log('Taille du buffer:', imageBuffer.length, 'bytes')
 
-    // Vérifier les credentials
-    if (!process.env.GOOGLE_CLOUD_PROJECT_ID || 
-        !process.env.GOOGLE_CLOUD_CLIENT_EMAIL || 
-        !process.env.GOOGLE_CLOUD_PRIVATE_KEY) {
-      throw new Error('Configuration Google Cloud incomplète')
-    }
+    // Créer le client Vision AI
+    console.log('Création du client Vision AI...')
+    const vision = await createVisionClient()
 
     // Analyser l'image
     console.log('Envoi à Vision AI...')
     const [result] = await vision.textDetection({
       image: {
-        content: imageBuffer
+        content: imageBuffer.toString('base64')
       }
     })
 
