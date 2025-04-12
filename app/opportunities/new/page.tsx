@@ -79,7 +79,7 @@ export default function NewOpportunity() {
 
     const formDataToSend = {
       ...formData,
-      value: parseFloat(formData.value) || 0
+      value: formData.value === '' ? 0 : parseFloat(formData.value) || 0
     }
 
     try {
@@ -91,9 +91,10 @@ export default function NewOpportunity() {
         body: JSON.stringify(formDataToSend),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Une erreur est survenue')
+        throw new Error(data.error || 'Une erreur est survenue')
       }
 
       router.push('/opportunities')

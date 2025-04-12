@@ -30,40 +30,60 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Vous devez être connecté pour créer une opportunité' },
+        { status: 401 }
+      )
     }
 
-    const body = await request.json()
-    const { name, company, value, stage, closeDate } = body
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
 
-    if (!name || !company || !value || !stage || !closeDate) {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Veuillez remplir tous les champs obligatoires' },
+        { error: 'Utilisateur non trouvé' },
+        { status: 404 }
+      )
+    }
+
+    const data = await request.json()
+    
+    if (!data.name?.trim()) {
+      return NextResponse.json(
+        { error: 'Le nom est requis' },
         { status: 400 }
       )
     }
 
-    const data = {
-      name,
-      company,
-      value: parseFloat(value),
-      stage,
-      status: stage === 'Gagné' ? 'won' : stage === 'Perdu' ? 'lost' : 'new',
-      closeDate: new Date(closeDate),
-      userId: session.user.id
+    if (!data.company?.trim()) {
+      return NextResponse.json(
+        { error: 'L\'entreprise est requise' },
+        { status: 400 }
+      )
     }
 
-    console.log('Création opportunité:', data)
-
-    const opportunity = await prisma.opportunity.create({ data })
-    console.log('Opportunité créée:', opportunity)
+    const opportunity = await prisma.opportunity.create({
+      data: {
+        name: data.name.trim(),
+        company: data.company.trim(),
+        value: data.value === '' ? 0 : Number(data.value) || 0,
+        stage: data.stage || 'Nouveau',
+        closeDate: new Date(data.closeDate),
+        notes: data.notes?.trim() || '',
+        city: data.city?.trim() || '',
+        postalCode: data.postalCode?.trim() || '',
+        cardImage: data.cardImage || '',
+        userId: user.id
+      }
+    })
 
     return NextResponse.json(opportunity)
   } catch (error) {
-    console.error('Erreur lors de la création de l\'opportunité:', error)
+    console.error('Erreur création opportunité:', error)
     return NextResponse.json(
-      { error: 'Une erreur est survenue lors de la création de l\'opportunité' },
+      { error: 'Erreur lors de la création de l\'opportunité' },
       { status: 500 }
     )
   }
