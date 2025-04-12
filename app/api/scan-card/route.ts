@@ -82,7 +82,9 @@ export async function POST(request: Request) {
       company: extractCompany(detectedText),
       name: extractName(detectedText),
       email: extractEmail(detectedText),
-      phone: extractPhone(detectedText)
+      phone: extractPhone(detectedText),
+      address: extractAddress(detectedText),
+      cardImage: image // On garde l'image en base64
     }
 
     console.log('Données extraites:', data)
@@ -171,4 +173,34 @@ function extractPhone(text: string): string {
   const phoneRegex = /(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}/
   const match = text.match(phoneRegex)
   return match ? match[0].replace(/[\s.-]/g, '') : ''
+}
+
+function extractAddress(text: string): { city?: string, postalCode?: string } {
+  const lines = text.split('\n')
+  const result: { city?: string, postalCode?: string } = {}
+
+  // Chercher un code postal français (5 chiffres) et la ville associée
+  for (const line of lines) {
+    const match = line.match(/(\d{5})\s+([A-Z][A-Za-zÀ-ÿ\s-]+)/)
+    if (match) {
+      result.postalCode = match[1]
+      result.city = match[2].trim()
+      break
+    }
+  }
+
+  // Si on n'a pas trouvé, chercher juste une ville en majuscules
+  if (!result.city) {
+    const cityLine = lines.find(line => 
+      /^[A-Z][A-Z\s-]+$/.test(line.trim()) && // Ville en majuscules
+      line.length > 2 && // Plus de 2 caractères
+      !/^\d/.test(line) && // Ne commence pas par un chiffre
+      !line.includes('@') // N'est pas un email
+    )
+    if (cityLine) {
+      result.city = cityLine.trim()
+    }
+  }
+
+  return result
 }

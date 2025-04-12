@@ -94,7 +94,10 @@ export default function ScanBusinessCard() {
         company: data.company || '',
         name: data.name || '',
         email: data.email || '',
-        phone: data.phone || ''
+        phone: data.phone || '',
+        city: data.address?.city || '',
+        postalCode: data.address?.postalCode || '',
+        cardImage: data.cardImage || ''
       }))
     } catch (error) {
       console.error('Erreur complète:', error)

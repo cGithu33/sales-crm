@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, useEffect, useState } from 'react'
+import Image from 'next/image'
 
 export default function NewOpportunity() {
   const { data: session, status } = useSession()
@@ -16,7 +17,10 @@ export default function NewOpportunity() {
     value: '',
     stage: 'Nouveau',
     closeDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    city: '',
+    postalCode: '',
+    cardImage: ''
   })
 
   // Redirection si non authentifié
@@ -40,11 +44,17 @@ export default function NewOpportunity() {
     const name = searchParams.get('name')
     const email = searchParams.get('email')
     const phone = searchParams.get('phone')
+    const city = searchParams.get('city')
+    const postalCode = searchParams.get('postalCode')
+    const cardImage = searchParams.get('cardImage')
 
     setFormData(prev => ({
       ...prev,
       company: company || '',
       name: name || '',
+      city: city || '',
+      postalCode: postalCode || '',
+      cardImage: cardImage || '',
       // Stocker email et téléphone dans les notes si présents
       notes: [
         email && `Email: ${email}`,
@@ -95,6 +105,18 @@ export default function NewOpportunity() {
             <h3 className="text-lg font-medium leading-6 text-gray-900">
               Nouvelle Opportunité
             </h3>
+
+            {formData.cardImage && (
+              <div className="mt-4 relative h-48 w-full">
+                <Image
+                  src={formData.cardImage}
+                  alt="Carte de visite"
+                  fill
+                  className="object-contain rounded-lg"
+                />
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="mt-5 space-y-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -124,6 +146,36 @@ export default function NewOpportunity() {
                   onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                    Ville
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700">
+                    Code Postal
+                  </label>
+                  <input
+                    type="text"
+                    name="postalCode"
+                    id="postalCode"
+                    value={formData.postalCode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, postalCode: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
               </div>
 
               <div>
