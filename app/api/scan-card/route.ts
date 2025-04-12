@@ -14,15 +14,42 @@ const vision = new ImageAnnotatorClient(credentials)
 
 export async function POST(request: Request) {
   try {
+    console.log('Début de l\'analyse de la carte...')
     const { image } = await request.json()
 
+    if (!image) {
+      console.error('Pas d\'image reçue')
+      throw new Error('Aucune image n\'a été fournie')
+    }
+
+    console.log('Image reçue, taille:', image.length, 'caractères')
+
     // Convertir l'image base64 en buffer
-    const buffer = Buffer.from(image.split(',')[1], 'base64')
+    const base64Data = image.split(',')[1] // Enlever le préfixe "data:image/jpeg;base64,"
+    if (!base64Data) {
+      console.error('Format d\'image invalide')
+      throw new Error('Format d\'image invalide')
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64')
+    console.log('Image convertie en buffer, taille:', buffer.length, 'bytes')
+
+    // Vérifier les credentials
+    console.log('Vérification des credentials...')
+    console.log('Project ID:', process.env.GOOGLE_CLOUD_PROJECT_ID)
+    console.log('Client Email:', process.env.GOOGLE_CLOUD_CLIENT_EMAIL)
+    console.log('Private Key présente:', !!process.env.GOOGLE_CLOUD_PRIVATE_KEY)
 
     // Analyser l'image avec Vision AI
+    console.log('Envoi à Vision AI...')
     const [result] = await vision.textDetection(buffer)
-    const detectedText = result.fullTextAnnotation?.text || ''
+    
+    if (!result) {
+      console.error('Pas de résultat de Vision AI')
+      throw new Error('Erreur lors de l\'analyse de l\'image')
+    }
 
+    const detectedText = result.fullTextAnnotation?.text || ''
     console.log('Texte détecté:', detectedText)
 
     // Extraire les informations pertinentes
@@ -34,11 +61,16 @@ export async function POST(request: Request) {
     }
 
     console.log('Données extraites:', data)
+
+    if (!data.company && !data.name && !data.email && !data.phone) {
+      throw new Error('Aucune information n\'a pu être extraite de l\'image')
+    }
+
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Erreur analyse carte:', error)
+    console.error('Erreur complète:', error)
     return NextResponse.json(
-      { error: 'Erreur lors de l\'analyse de la carte' },
+      { error: error instanceof Error ? error.message : 'Erreur lors de l\'analyse de la carte' },
       { status: 500 }
     )
   }
