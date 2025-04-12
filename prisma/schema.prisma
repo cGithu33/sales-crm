@@ -19,12 +19,11 @@ model User {
 
 model Opportunity {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
+  name        String
   company     String
   value       Float
   status      String   @default("new")
   notes       String?
-  name        String
   stage       String
   closeDate   DateTime
   userId      String   @db.ObjectId
