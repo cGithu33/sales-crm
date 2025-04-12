@@ -1,14 +1,23 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { FormEvent, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { FormEvent, useEffect, useState } from 'react'
 
 export default function NewOpportunity() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    company: '',
+    value: '',
+    stage: 'Nouveau',
+    closeDate: new Date().toISOString().split('T')[0],
+    notes: ''
+  })
 
   // Redirection si non authentifié
   if (status === 'unauthenticated') {
@@ -25,18 +34,33 @@ export default function NewOpportunity() {
     )
   }
 
+  // Récupérer les données de l'URL au chargement
+  useEffect(() => {
+    const company = searchParams.get('company')
+    const name = searchParams.get('name')
+    const email = searchParams.get('email')
+    const phone = searchParams.get('phone')
+
+    setFormData(prev => ({
+      ...prev,
+      company: company || '',
+      name: name || '',
+      // Stocker email et téléphone dans les notes si présents
+      notes: [
+        email && `Email: ${email}`,
+        phone && `Téléphone: ${phone}`
+      ].filter(Boolean).join('\n') || ''
+    }))
+  }, [searchParams])
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
-    const formData = new FormData(e.currentTarget)
-    const data = {
-      name: formData.get('name'),
-      company: formData.get('company'),
-      value: formData.get('value'),
-      stage: formData.get('stage'),
-      closeDate: formData.get('closeDate')
+    const formDataToSend = {
+      ...formData,
+      value: parseFloat(formData.value) || 0
     }
 
     try {
@@ -45,7 +69,7 @@ export default function NewOpportunity() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formDataToSend),
       })
 
       if (!response.ok) {
@@ -81,6 +105,8 @@ export default function NewOpportunity() {
                   name="name"
                   id="name"
                   required
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 />
               </div>
@@ -94,6 +120,8 @@ export default function NewOpportunity() {
                   name="company"
                   id="company"
                   required
+                  value={formData.company}
+                  onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 />
               </div>
@@ -109,6 +137,8 @@ export default function NewOpportunity() {
                   required
                   min="0"
                   step="0.01"
+                  value={formData.value}
+                  onChange={(e) => setFormData(prev => ({ ...prev, value: e.target.value }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 />
               </div>
@@ -121,6 +151,8 @@ export default function NewOpportunity() {
                   id="stage"
                   name="stage"
                   required
+                  value={formData.stage}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stage: e.target.value }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 >
                   <option value="Nouveau">Nouveau</option>
@@ -141,6 +173,22 @@ export default function NewOpportunity() {
                   name="closeDate"
                   id="closeDate"
                   required
+                  value={formData.closeDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, closeDate: e.target.value }))}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                  Notes
+                </label>
+                <textarea
+                  name="notes"
+                  id="notes"
+                  rows={3}
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 />
               </div>
