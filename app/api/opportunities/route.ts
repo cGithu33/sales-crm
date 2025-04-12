@@ -47,9 +47,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, value, stage, closeDate } = body
+    const { name, company, value, stage, closeDate } = body
 
-    if (!name || !value || !stage || !closeDate) {
+    if (!name || !company || !value || !stage || !closeDate) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -58,7 +58,8 @@ export async function POST(request: Request) {
 
     const opportunity = await prisma.opportunity.create({
       data: {
-        name,
+        title: name,
+        company,
         value: parseFloat(value),
         stage,
         closeDate: new Date(closeDate),
