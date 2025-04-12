@@ -8,12 +8,13 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  email         String        @unique
+  password      String
+  opportunities Opportunity[]
+  name          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Opportunity {
@@ -23,6 +24,11 @@ model Opportunity {
   value       Float
   status      String   @default("new")
   notes       String?
+  name        String
+  stage       String
+  closeDate   DateTime
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   activities  Activity[]
