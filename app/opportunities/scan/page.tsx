@@ -27,14 +27,46 @@ export default function ScanBusinessCard() {
 
       console.log('Fichier sélectionné:', file.name, 'taille:', file.size, 'type:', file.type)
 
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Le fichier doit être une image')
+      }
+
       // Convertir l'image en base64
-      const base64 = await new Promise<string>((resolve) => {
+      const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
         reader.onloadend = () => {
-          const result = reader.result as string
-          console.log('Image convertie en base64, taille:', result.length)
-          resolve(result)
+          try {
+            // Créer une image pour vérifier le format
+            const img = new Image()
+            img.onload = () => {
+              // Créer un canvas pour convertir l'image en JPEG
+              const canvas = document.createElement('canvas')
+              canvas.width = img.width
+              canvas.height = img.height
+              const ctx = canvas.getContext('2d')
+              if (!ctx) {
+                reject(new Error('Impossible de créer le contexte canvas'))
+                return
+              }
+
+              // Dessiner l'image sur le canvas avec un fond blanc
+              ctx.fillStyle = 'white'
+              ctx.fillRect(0, 0, canvas.width, canvas.height)
+              ctx.drawImage(img, 0, 0)
+
+              // Convertir en JPEG
+              const jpegBase64 = canvas.toDataURL('image/jpeg', 0.9)
+              console.log('Image convertie en JPEG, taille:', jpegBase64.length)
+              resolve(jpegBase64)
+            }
+            img.onerror = () => reject(new Error('Format d\'image non supporté'))
+            img.src = reader.result as string
+          } catch (error) {
+            reject(error)
+          }
         }
+        reader.onerror = () => reject(new Error('Erreur lors de la lecture du fichier'))
         reader.readAsDataURL(file)
       })
 
