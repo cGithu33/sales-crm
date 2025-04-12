@@ -17,7 +17,7 @@ declare module "next-auth" {
 
 const prisma = new PrismaClient()
 
-const options: NextAuthOptions = {
+export const options: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
