@@ -10,6 +10,21 @@ export default function NewOpportunity() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Redirection si non authentifié
+  if (status === 'unauthenticated') {
+    router.push('/auth/signin')
+    return null
+  }
+
+  // Affichage du chargement pendant la vérification de la session
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-2xl font-semibold">Chargement...</div>
+      </div>
+    )
+  }
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
@@ -41,23 +56,11 @@ export default function NewOpportunity() {
       router.push('/opportunities')
       router.refresh()
     } catch (error) {
+      console.error('Erreur:', error)
       setError(error instanceof Error ? error.message : 'Une erreur est survenue')
     } finally {
       setLoading(false)
     }
-  }
-
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-2xl font-semibold">Chargement...</div>
-      </div>
-    )
-  }
-
-  if (status === 'unauthenticated') {
-    router.push('/auth/signin')
-    return null
   }
 
   return (
@@ -152,14 +155,15 @@ export default function NewOpportunity() {
                 <button
                   type="button"
                   onClick={() => router.back()}
-                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  disabled={loading}
+                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
                   {loading ? 'Création...' : 'Créer l\'opportunité'}
                 </button>

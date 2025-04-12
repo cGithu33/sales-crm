@@ -6,10 +6,11 @@ import { useEffect, useState } from 'react'
 
 interface Opportunité {
   id: string
-  nom: string
-  valeur: number
-  état: string
-  dateDeClôture: string
+  name: string
+  company: string
+  value: number
+  stage: string
+  closeDate: string
 }
 
 export default function Opportunités() {
@@ -17,35 +18,47 @@ export default function Opportunités() {
   const router = useRouter()
   const [opportunités, setOpportunités] = useState<Opportunité[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin')
+      return
     }
-  }, [status, router])
 
-  useEffect(() => {
     const fetchOpportunités = async () => {
       try {
         const response = await fetch('/api/opportunities')
+        if (!response.ok) {
+          throw new Error('Erreur lors de la récupération des données')
+        }
         const data = await response.json()
         setOpportunités(data)
       } catch (error) {
-        console.error('Erreur lors de la récupération des opportunités:', error)
+        console.error('Erreur:', error)
+        setError('Une erreur est survenue lors du chargement des opportunités')
       } finally {
         setLoading(false)
       }
     }
 
-    if (session) {
+    if (status === 'authenticated') {
       fetchOpportunités()
     }
-  }, [session])
+  }, [status, router])
 
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-2xl font-semibold">Chargement...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl text-red-600">{error}</div>
       </div>
     )
   }
@@ -76,18 +89,21 @@ export default function Opportunités() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-indigo-600 truncate">
-                          {opportunité.nom}
+                          {opportunité.name}
                         </p>
                         <p className="mt-1 text-sm text-gray-500">
-                          État : {opportunité.état}
+                          {opportunité.company}
+                        </p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          État : {opportunité.stage}
                         </p>
                       </div>
                       <div className="ml-4 flex-shrink-0">
                         <p className="text-sm font-medium text-gray-900">
-                          {opportunité.valeur.toLocaleString()} €
+                          {opportunité.value.toLocaleString()} €
                         </p>
                         <p className="mt-1 text-sm text-gray-500">
-                          Clôture : {new Date(opportunité.dateDeClôture).toLocaleDateString('fr-FR')}
+                          Clôture : {new Date(opportunité.closeDate).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
                     </div>
