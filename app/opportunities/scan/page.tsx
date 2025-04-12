@@ -2,26 +2,14 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
 
 export default function ScanBusinessCard() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
-  const [scanning, setScanning] = useState(false)
   const [processing, setProcessing] = useState(false)
-  const [stream, setStream] = useState<MediaStream | null>(null)
-
-  // Nettoyage du stream quand on quitte la page
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop())
-      }
-    }
-  }, [stream])
 
   // Redirection si non authentifié
   if (status === 'unauthenticated') {
@@ -29,91 +17,20 @@ export default function ScanBusinessCard() {
     return null
   }
 
-  // Démarrer la caméra
-  const startCamera = async () => {
-    try {
-      // Vérifier si la caméra est disponible
-      if (!navigator.mediaDevices) {
-        throw new Error('La caméra n\'est pas disponible sur votre appareil')
-      }
-
-      console.log('Tentative d\'accès à la caméra...')
-
-      // Essayer d'abord la caméra arrière
-      try {
-        console.log('Tentative caméra arrière...')
-        const constraints = {
-          video: {
-            facingMode: { exact: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
-        }
-        console.log('Contraintes:', constraints)
-        
-        const newStream = await navigator.mediaDevices.getUserMedia(constraints)
-        console.log('Flux caméra arrière obtenu')
-        
-        setStream(newStream)
-        if (videoRef.current) {
-          videoRef.current.srcObject = newStream
-          setScanning(true)
-        }
-      } catch (backCameraError) {
-        console.log('Erreur caméra arrière:', backCameraError)
-        console.log('Tentative caméra frontale...')
-        
-        // Si la caméra arrière échoue, essayer la caméra frontale
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'user',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
-        })
-        console.log('Flux caméra frontale obtenu')
-        
-        setStream(newStream)
-        if (videoRef.current) {
-          videoRef.current.srcObject = newStream
-          setScanning(true)
-        }
-      }
-    } catch (error) {
-      console.error('Erreur accès caméra:', error)
-      setError('Impossible d\'accéder à la caméra. Vérifiez vos paramètres de confidentialité.')
-    }
-  }
-
-  // Arrêter la caméra
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-      setStream(null)
-      setScanning(false)
-    }
-  }
-
-  // Prendre une photo
-  const captureImage = async () => {
-    if (!videoRef.current || !canvasRef.current) return
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
 
     try {
       setProcessing(true)
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const context = canvas.getContext('2d')
+      setError('')
 
-      // Capturer l'image
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      context?.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-      // Convertir en base64
-      const imageData = canvas.toDataURL('image/jpeg')
-
-      // Arrêter la caméra après la capture
-      stopCamera()
+      // Convertir l'image en base64
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
+      })
 
       // Envoyer au serveur pour OCR
       const response = await fetch('/api/scan-card', {
@@ -121,7 +38,7 @@ export default function ScanBusinessCard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ image: imageData }),
+        body: JSON.stringify({ image: base64 }),
       })
 
       if (!response.ok) {
@@ -138,9 +55,8 @@ export default function ScanBusinessCard() {
         phone: data.phone || ''
       }))
     } catch (error) {
-      console.error('Erreur capture:', error)
-      setError('Erreur lors de la capture. Veuillez réessayer.')
-      setScanning(false)
+      console.error('Erreur analyse:', error)
+      setError('Erreur lors de l\'analyse. Veuillez réessayer.')
     } finally {
       setProcessing(false)
     }
@@ -161,59 +77,43 @@ export default function ScanBusinessCard() {
               </div>
             )}
 
-            <div className="mt-4 relative aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden">
-              {!scanning ? (
-                <button
-                  onClick={startCamera}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <span className="px-4 py-2 bg-indigo-600 text-white rounded-md">
-                    Activer la caméra
-                  </span>
-                </button>
-              ) : (
-                <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    className="hidden"
-                  />
-                </>
-              )}
-            </div>
-
-            <div className="mt-4 flex justify-center space-x-4">
-              {scanning && (
-                <>
-                  <button
-                    onClick={stopCamera}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md disabled:opacity-50"
-                    disabled={processing}
-                  >
-                    Arrêter la caméra
-                  </button>
-                  <button
-                    onClick={captureImage}
-                    disabled={processing}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50"
-                  >
-                    {processing ? 'Analyse en cours...' : 'Prendre la photo'}
-                  </button>
-                </>
-              )}
+            <div className="mt-4">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={processing}
+                className="w-full px-4 py-8 bg-indigo-600 text-white rounded-lg disabled:opacity-50 flex flex-col items-center justify-center space-y-2"
+              >
+                {processing ? (
+                  <>
+                    <svg className="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Analyse en cours...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Prendre une photo</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <p className="mt-4 text-sm text-gray-500 text-center">
-              {scanning 
-                ? 'Placez la carte de visite dans le cadre et prenez la photo'
-                : 'Cliquez sur le bouton pour activer la caméra'
-              }
+              Prenez une photo claire de la carte de visite
             </p>
           </div>
         </div>
