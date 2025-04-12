@@ -17,6 +17,51 @@ export default function ScanBusinessCard() {
     return null
   }
 
+  // Fonction pour redimensionner l'image
+  const resizeImage = async (base64Image: string, maxWidth: number = 800): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          // Calculer les nouvelles dimensions
+          let width = img.width
+          let height = img.height
+          
+          if (width > maxWidth) {
+            height = Math.floor(height * (maxWidth / width))
+            width = maxWidth
+          }
+
+          // Créer un canvas pour le redimensionnement
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Impossible de créer le contexte canvas'))
+            return
+          }
+
+          // Fond blanc
+          ctx.fillStyle = 'white'
+          ctx.fillRect(0, 0, width, height)
+          
+          // Dessiner l'image redimensionnée
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          // Convertir en JPEG avec compression
+          const resizedImage = canvas.toDataURL('image/jpeg', 0.7)
+          console.log('Image redimensionnée :', Math.round(resizedImage.length / 1024), 'KB')
+          resolve(resizedImage)
+        } catch (error) {
+          reject(error)
+        }
+      }
+      img.onerror = () => reject(new Error('Erreur lors du chargement de l\'image'))
+      img.src = base64Image
+    })
+  }
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -25,50 +70,29 @@ export default function ScanBusinessCard() {
       setProcessing(true)
       setError('')
 
-      console.log('Fichier sélectionné:', file.name, 'taille:', file.size, 'type:', file.type)
+      console.log('Fichier sélectionné:', file.name, 'taille:', Math.round(file.size / 1024), 'KB')
 
       // Vérifier le type de fichier
       if (!file.type.startsWith('image/')) {
         throw new Error('Le fichier doit être une image')
       }
 
+      // Vérifier la taille du fichier
+      if (file.size > 10 * 1024 * 1024) { // 10MB
+        throw new Error('L\'image est trop volumineuse. Maximum 10MB.')
+      }
+
       // Convertir l'image en base64
-      const base64 = await new Promise<string>((resolve, reject) => {
+      const originalBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
-        reader.onloadend = () => {
-          try {
-            // Créer une image pour vérifier le format
-            const img = new Image()
-            img.onload = () => {
-              // Créer un canvas pour convertir l'image en JPEG
-              const canvas = document.createElement('canvas')
-              canvas.width = img.width
-              canvas.height = img.height
-              const ctx = canvas.getContext('2d')
-              if (!ctx) {
-                reject(new Error('Impossible de créer le contexte canvas'))
-                return
-              }
-
-              // Dessiner l'image sur le canvas avec un fond blanc
-              ctx.fillStyle = 'white'
-              ctx.fillRect(0, 0, canvas.width, canvas.height)
-              ctx.drawImage(img, 0, 0)
-
-              // Convertir en JPEG
-              const jpegBase64 = canvas.toDataURL('image/jpeg', 0.9)
-              console.log('Image convertie en JPEG, taille:', jpegBase64.length)
-              resolve(jpegBase64)
-            }
-            img.onerror = () => reject(new Error('Format d\'image non supporté'))
-            img.src = reader.result as string
-          } catch (error) {
-            reject(error)
-          }
-        }
+        reader.onloadend = () => resolve(reader.result as string)
         reader.onerror = () => reject(new Error('Erreur lors de la lecture du fichier'))
         reader.readAsDataURL(file)
       })
+
+      // Redimensionner l'image
+      console.log('Redimensionnement de l\'image...')
+      const resizedBase64 = await resizeImage(originalBase64)
 
       console.log('Envoi de la requête à /api/scan-card...')
 
@@ -78,18 +102,20 @@ export default function ScanBusinessCard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ image: base64 }),
+        body: JSON.stringify({ 
+          image: resizedBase64
+        }),
       })
 
-      console.log('Réponse reçue, status:', response.status)
-      const data = await response.json()
-      console.log('Données reçues:', data)
-
       if (!response.ok) {
+        const data = await response.json()
         throw new Error(data.error || 'Erreur lors de l\'analyse de l\'image')
       }
 
-      // Créer l'opportunité avec les données extraites
+      const data = await response.json()
+      console.log('Données extraites avec succès')
+
+      // Rediriger vers le formulaire avec les données
       router.push('/opportunities/new?' + new URLSearchParams({
         company: data.company || '',
         name: data.name || '',
@@ -97,7 +123,7 @@ export default function ScanBusinessCard() {
         phone: data.phone || '',
         city: data.address?.city || '',
         postalCode: data.address?.postalCode || '',
-        cardImage: data.cardImage || ''
+        cardImage: resizedBase64 // Utiliser l'image redimensionnée
       }))
     } catch (error) {
       console.error('Erreur complète:', error)
@@ -155,11 +181,12 @@ export default function ScanBusinessCard() {
                   </>
                 )}
               </button>
-            </div>
 
-            <p className="mt-4 text-sm text-gray-500 text-center">
-              Prenez une photo claire de la carte de visite
-            </p>
+              <p className="mt-4 text-sm text-gray-500 text-center">
+                Prenez une photo claire de la carte de visite.<br />
+                Taille maximale : 10MB
+              </p>
+            </div>
           </div>
         </div>
       </div>
