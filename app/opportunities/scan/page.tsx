@@ -115,15 +115,22 @@ export default function ScanBusinessCard() {
       const data = await response.json()
       console.log('Données extraites avec succès')
 
-      // Rediriger vers le formulaire avec les données
+      // Stocker l'image dans le localStorage
+      try {
+        localStorage.setItem('tempCardImage', resizedBase64)
+      } catch (error) {
+        console.error('Erreur lors du stockage de l\'image:', error)
+        // Continuer même si le stockage échoue
+      }
+
+      // Rediriger vers le formulaire avec les données (sans l'image dans l'URL)
       router.push('/opportunities/new?' + new URLSearchParams({
         company: data.company || '',
         name: data.name || '',
         email: data.email || '',
         phone: data.phone || '',
         city: data.address?.city || '',
-        postalCode: data.address?.postalCode || '',
-        cardImage: resizedBase64 // Utiliser l'image redimensionnée
+        postalCode: data.address?.postalCode || ''
       }))
     } catch (error) {
       console.error('Erreur complète:', error)

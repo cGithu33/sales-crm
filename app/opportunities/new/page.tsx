@@ -38,7 +38,7 @@ export default function NewOpportunity() {
     )
   }
 
-  // Récupérer les données de l'URL au chargement
+  // Récupérer les données de l'URL et du localStorage au chargement
   useEffect(() => {
     const company = searchParams.get('company')
     const name = searchParams.get('name')
@@ -46,7 +46,16 @@ export default function NewOpportunity() {
     const phone = searchParams.get('phone')
     const city = searchParams.get('city')
     const postalCode = searchParams.get('postalCode')
-    const cardImage = searchParams.get('cardImage')
+    
+    // Récupérer l'image du localStorage
+    let cardImage = ''
+    try {
+      cardImage = localStorage.getItem('tempCardImage') || ''
+      // Nettoyer le localStorage après récupération
+      localStorage.removeItem('tempCardImage')
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'image:', error)
+    }
 
     setFormData(prev => ({
       ...prev,
@@ -54,7 +63,7 @@ export default function NewOpportunity() {
       name: name || '',
       city: city || '',
       postalCode: postalCode || '',
-      cardImage: cardImage || '',
+      cardImage: cardImage,
       // Stocker email et téléphone dans les notes si présents
       notes: [
         email && `Email: ${email}`,
