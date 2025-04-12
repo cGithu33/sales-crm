@@ -2,8 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: 'standalone',
   images: {
     domains: ['localhost'],
+    unoptimized: true
   },
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
@@ -25,5 +27,18 @@ const nextConfig = {
   publicRuntimeConfig: {
     // Will be available on both server and client
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=self'
+          }
+        ]
+      }
+    ]
   }
 }
