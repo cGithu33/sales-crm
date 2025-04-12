@@ -17,7 +17,7 @@ declare module "next-auth" {
 
 const prisma = new PrismaClient()
 
-export const authOptions: NextAuthOptions = {
+const options: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -79,5 +79,5 @@ export const authOptions: NextAuthOptions = {
   }
 }
 
-export const handler = NextAuth(authOptions)
+const handler = NextAuth(options)
 export { handler as GET, handler as POST }
