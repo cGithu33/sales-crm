@@ -110,6 +110,7 @@ function extractCompany(text: string): string {
   return lines.find(line => 
     line.length > 3 &&
     /[A-Z]/.test(line) && // Contient au moins une majuscule
+    !/^[A-Z][a-zÀ-ÿ]+(\s+[A-Z][a-zÀ-ÿ]+)+$/.test(line) && // N'est pas un nom de personne
     !line.includes('@') && // Pas un email
     !line.match(/^\+?\d/) && // Ne commence pas par un numéro
     !/^(M|Mme|Mr|Dr)\.?\s/.test(line) // N'est pas un titre
@@ -118,11 +119,45 @@ function extractCompany(text: string): string {
 
 function extractName(text: string): string {
   const lines = text.split('\n')
-  return lines.find(line => 
-    line.match(/^[A-Z][a-zÀ-ÿ]+(\s+[A-Z][a-zÀ-ÿ]+)+$/) && // Format "Prénom Nom" avec accents
-    !line.includes('@') && // Pas un email
-    !line.match(/^\+?\d/) // Ne commence pas par un numéro
-  ) || ''
+  
+  // Rechercher d'abord les lignes qui commencent par un titre
+  let name = lines.find(line => 
+    /^(M|Mme|Mr|Dr)\.?\s+[A-Z][a-zÀ-ÿ]+(\s+[A-Z][a-zÀ-ÿ]+)+$/.test(line)
+  )
+  
+  if (name) {
+    // Enlever le titre si trouvé
+    name = name.replace(/^(M|Mme|Mr|Dr)\.?\s+/, '')
+    return name
+  }
+
+  // Sinon chercher un nom sans titre
+  // Assouplir la regex pour permettre plus de variations
+  return lines.find(line => {
+    // Nettoyer la ligne
+    const cleanLine = line.trim()
+    
+    // Vérifier que la ligne :
+    // 1. Ne contient pas d'email
+    // 2. Ne commence pas par un numéro
+    // 3. N'est pas trop longue (pour éviter les phrases)
+    // 4. A au moins deux mots
+    // 5. Chaque mot commence par une majuscule
+    if (cleanLine.includes('@') || 
+        cleanLine.match(/^\+?\d/) || 
+        cleanLine.length > 40 || 
+        cleanLine.split(/\s+/).length < 2) {
+      return false
+    }
+
+    // Vérifier que chaque mot commence par une majuscule
+    const words = cleanLine.split(/\s+/)
+    return words.every(word => 
+      word.length > 1 && 
+      /^[A-Z]/.test(word) &&
+      !/^\d/.test(word)
+    )
+  }) || ''
 }
 
 function extractEmail(text: string): string {
