@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     const opportunity = await prisma.opportunity.create({
       data: {
-        title: name,
+        name,
         company,
         value: parseFloat(value),
         stage,
